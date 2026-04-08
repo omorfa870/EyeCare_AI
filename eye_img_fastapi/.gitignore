@@ -1,0 +1,82 @@
+# ------------------------------
+# Virtual environments
+# ------------------------------
+venv/
+.venv/
+env/
+ENV/
+
+# ------------------------------
+# Environment files
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------
+# Python cache / compiled files
+# ------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ------------------------------
+# Jupyter
+# ------------------------------
+.ipynb_checkpoints/
+
+# ------------------------------
+# IDE / Editor
+# ------------------------------
+.vscode/
+.idea/
+
+# ------------------------------
+# OS files
+# ------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------
+# Logs
+# ------------------------------
+*.log
+
+# ------------------------------
+# Build / packaging
+# ------------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ------------------------------
+# Test / coverage / type-check cache
+# ------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+
+# ------------------------------
+# Temporary / local files
+# ------------------------------
+temp/
+tmp/
+uploads/
+
+# ------------------------------
+# Large model files
+# Do not upload trained weights to normal GitHub
+# ------------------------------
+models/*.h5
+models/*.keras
+models/*.pkl
+*.h5
+*.keras
+*.pt
+*.pth
