@@ -46,3 +46,5 @@ Image_Classification/
 
 
 # Models files drive link  "https://drive.google.com/drive/folders/1ISHb48yyvbt3ez7DP5mF_9SM-1FkeTjP"
+
+# get server: python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload 
