@@ -5,9 +5,16 @@ import morgan from 'morgan';
 import path from 'path';
 import connectDB from './config/db';
 import mainRoutes from './routes/mainRoutes';
+import { seedAdmins } from './controllers/authController';
 
 dotenv.config();
-connectDB();
+
+const startServer = async () => {
+  await connectDB();
+  await seedAdmins().catch(err => console.error('Admin seed error:', err));
+};
+
+startServer();
 
 const app = express();
 app.use(cors()); // Allow all temporarily to rule out origin mismatch

@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/authStore";
-import { Eye, EyeOff, Loader2, ArrowLeft, Stethoscope, ShieldCheck, User } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, Stethoscope, User, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +21,10 @@ export default function RegisterClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   const initialRole =
-    (searchParams.get("role") as "patient" | "doctor" | "admin") || "patient";
+    (searchParams.get("role") as "patient" | "doctor") || "patient";
 
   const [formData, setFormData] = useState({
     email: "",
@@ -38,7 +39,7 @@ export default function RegisterClient() {
 
   useEffect(() => {
     const role =
-      (searchParams.get("role") as "patient" | "doctor" | "admin") || "patient";
+      (searchParams.get("role") as "patient" | "doctor") || "patient";
 
     setFormData((prev) => ({
       ...prev,
@@ -91,15 +92,14 @@ export default function RegisterClient() {
         registerData.registrationNumber = raw.registrationNumber;
       }
 
-      const response = await authApi.register(registerData);
-      setAuth(response.user, response.token, response.roleData);
+      const response: any = await authApi.register(registerData);
 
-      if (response.user.role === "patient") {
-        router.push("/patient/setup");
-      } else if (response.user.role === "doctor") {
-        router.push("/doctor/setup");
+      if (response.pendingApproval) {
+        // Doctor must wait for admin approval — do NOT log them in
+        setPendingApproval(true);
       } else {
-        router.push("/admin/dashboard");
+        setAuth(response.user, response.token, response.roleData);
+        router.push("/patient/setup");
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
@@ -108,9 +108,37 @@ export default function RegisterClient() {
     }
   };
 
-  const setRole = (role: "patient" | "doctor" | "admin") => {
+  const setRole = (role: "patient" | "doctor") => {
     setFormData((prev) => ({ ...prev, role }));
   };
+
+  // Pending approval screen for doctors
+  if (pendingApproval) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full mx-4 text-center space-y-6"
+        >
+          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-10 h-10 text-amber-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-foreground">Registration Submitted</h2>
+          <p className="text-muted-foreground text-lg leading-relaxed">
+            Your doctor account has been created and is <strong className="text-foreground">pending admin approval</strong>.
+            You will be able to log in once an administrator reviews and approves your request.
+          </p>
+          <div className="bg-muted/40 border border-border/50 rounded-2xl p-4 text-sm text-muted-foreground">
+            Please check back later or contact the administrator if you have questions.
+          </div>
+          <Link href="/login">
+            <Button className="w-full h-12 rounded-xl mt-2">Go to Login</Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
@@ -183,7 +211,7 @@ export default function RegisterClient() {
 
                   <div className="space-y-3 pb-2">
                     <Label>I am registering as a...</Label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setRole("patient")}
@@ -211,21 +239,12 @@ export default function RegisterClient() {
                         <Stethoscope className="h-6 w-6" />
                         <span className="text-sm font-semibold">Doctor</span>
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRole("admin")}
-                        className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
-                          formData.role === "admin"
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-border hover:border-primary/30 bg-card hover:bg-muted text-muted-foreground"
-                        )}
-                      >
-                        <ShieldCheck className="h-6 w-6" />
-                        <span className="text-sm font-semibold">Admin</span>
-                      </button>
                     </div>
+                    {formData.role === "doctor" && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                        Doctor accounts require admin approval before you can log in.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

@@ -140,7 +140,7 @@ export default function AppointmentsPage() {
                                   </span>
                                   <div className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1 rounded-full">
                                     {appointment.type === "remote" ? (
-                                      <><Video className="h-3.5 w-3.5 text-blue-500" /> Remote Video</>
+                                      <><Video className="h-3.5 w-3.5 text-blue-500" /> Teleconsultation</>
                                     ) : (
                                       <><Building className="h-3.5 w-3.5 text-emerald-500" /> Physical Visit</>
                                     )}

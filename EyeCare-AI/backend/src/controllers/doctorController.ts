@@ -26,23 +26,51 @@ export const createDoctorProfile = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Doctor profile already exists' });
     }
 
-    // 4. Create Profile
-    const doctor = await Doctor.create(req.body);
+    // 4. Create Profile (unapproved by default)
+    const doctor = await Doctor.create({ ...req.body, isApproved: false, isActive: false });
     res.status(201).json(doctor);
   } catch (e: any) {
     res.status(400).json({ message: 'Error creating doctor profile', error: e.message });
   }
 };
 
-// @desc    Get All Doctors
+// @desc    Get All Approved & Active Doctors (public)
 // @route   GET /api/doctors
 export const getDoctors = async (req: Request, res: Response) => {
   try {
-    // Populate user details (name, email) from the User collection
-    const doctors = await Doctor.find()
+    const doctors = await Doctor.find({ isApproved: true })
       .populate('user', 'profile.firstName profile.lastName email');
-      
     res.json(doctors);
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// @desc    Get Pending (unapproved) doctors — admin only
+// @route   GET /api/admin/doctors/pending
+export const getPendingDoctors = async (req: Request, res: Response) => {
+  try {
+    const doctors = await Doctor.find({ isApproved: false })
+      .populate('user', 'profile.firstName profile.lastName email createdAt');
+    res.json(doctors);
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// @desc    Approve a doctor signup request — admin only
+// @route   PUT /api/admin/doctors/:id/approve
+export const approveDoctor = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const doctor = await Doctor.findById(id);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    doctor.isApproved = true;
+    doctor.isActive = true;
+    await doctor.save();
+    res.json({ message: 'Doctor approved successfully', doctor });
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -107,16 +135,14 @@ export const searchDoctors = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    // Create case-insensitive regex pattern
     const searchPattern = new RegExp(query, 'i');
 
-    // Find doctors by specialization
     const doctorsBySpecialization = await Doctor.find({
+      isApproved: true,
       isActive: true,
       specialization: searchPattern
     }).populate('user', 'profile.firstName profile.lastName email');
 
-    // Find users (doctors) by name
     const usersByName = await User.find({
       role: 'doctor',
       $or: [
@@ -125,14 +151,13 @@ export const searchDoctors = async (req: Request, res: Response) => {
       ]
     }).select('_id');
 
-    // Get doctor profiles for matching users
     const userIds = usersByName.map(u => u._id);
     const doctorsByName = await Doctor.find({
+      isApproved: true,
       isActive: true,
       user: { $in: userIds }
     }).populate('user', 'profile.firstName profile.lastName email');
 
-    // Combine and deduplicate results
     const allDoctors = [...doctorsBySpecialization, ...doctorsByName];
     const uniqueDoctors = Array.from(
       new Map(allDoctors.map(doc => [doc._id.toString(), doc])).values()
@@ -160,8 +185,6 @@ export const updateDoctorStatus = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Doctor profile not found' });
     }
 
-    // Authorization: Admin or the Doctor themselves
-    // req.user is populated by authMiddleware
     if (req.user.role !== 'admin' && doctor.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to update this profile' });
     }

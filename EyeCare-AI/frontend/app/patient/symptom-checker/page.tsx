@@ -69,7 +69,24 @@ export default function SymptomCheckerPage() {
 
     try {
       const response = await symptomService.predict(symptomText);
-      setPredictions(response.predictions);
+      const allPredictions: PredictionItem[] = response.predictions || [];
+
+      // Find the highest confidence score
+      const maxConfidence = allPredictions.length > 0
+        ? Math.max(...allPredictions.map(p => p.confidence))
+        : 0;
+
+      if (maxConfidence < 0.5) {
+        // Below 50% — not related to eye disease
+        setPredictions([]);
+      } else {
+        // Show only the single highest-confidence prediction
+        const best = allPredictions.reduce((prev, curr) =>
+          curr.confidence > prev.confidence ? curr : prev
+        );
+        setPredictions([best]);
+      }
+
       setDisclaimer(response.disclaimer);
       setCleanedSymptom(response.cleaned_symptom);
     } catch (err: any) {
@@ -209,6 +226,27 @@ export default function SymptomCheckerPage() {
             )}
           </AnimatePresence>
 
+          {/* Not-related message when predictions returned but all below 50% */}
+          <AnimatePresence>
+            {predictions !== null && predictions.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                  <CardContent className="pt-6 pb-6 flex flex-col items-center text-center gap-3">
+                    <AlertCircle className="h-10 w-10 text-amber-500" />
+                    <p className="text-lg font-bold text-foreground">Text is not related to eye disease</p>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Please describe eye-specific symptoms for a more accurate analysis.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Results */}
           <AnimatePresence>
             {predictions && predictions.length > 0 && (
@@ -238,7 +276,7 @@ export default function SymptomCheckerPage() {
                       Potential Conditions
                     </CardTitle>
                     <CardDescription>
-                      Based on your symptoms, here are the most likely conditions
+                      Based on your symptoms, here is the most likely condition
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6">

@@ -108,4 +108,16 @@ export const adminApi = {
     const res = await api.delete(`/hospitals/${id}`);
     return res.data;
   },
+
+  // Get pending (unapproved) doctors
+  getPendingDoctors: async (): Promise<Doctor[]> => {
+    const res = await api.get('/admin/doctors/pending');
+    return res.data;
+  },
+
+  // Approve a doctor
+  approveDoctor: async (doctorId: string): Promise<Doctor> => {
+    const res = await api.put(`/admin/doctors/${doctorId}/approve`);
+    return res.data;
+  },
 };

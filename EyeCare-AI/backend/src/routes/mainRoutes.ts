@@ -5,11 +5,12 @@ import { createPatientProfile, bookAppointment, getAppointments, getPatientRecor
 import { createPrescription, getPrescriptionById, getPatientPrescriptions } from '../controllers/prescriptionController';
 import { analyzeEyeScan } from '../controllers/aiController';
 import { createAdminProfile, getSystemStats, getAllUsers, deleteUser, getAllPatients } from '../controllers/adminController';
+import { getBlockedDates, toggleBlockedDate } from '../controllers/blockedDateController';
 
 // Middleware
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
-import { createDoctorProfile, getDoctors, getDoctorStats, searchDoctors, updateDoctorStatus } from '../controllers/doctorController';
+import { createDoctorProfile, getDoctors, getDoctorStats, searchDoctors, updateDoctorStatus, getPendingDoctors, approveDoctor } from '../controllers/doctorController';
 import { getPatientReports, uploadReport } from '../controllers/reportController';
 import { updateProfile } from '../controllers/userController';
 
@@ -65,13 +66,19 @@ router.post('/availability', protect, authorize('doctor'), setAvailability);
 // Params: { id } | Query: None | Body: { startTime, endTime, maxPatients }
 router.put('/availability/:id', protect, authorize('doctor'), updateAvailability);
 // Params: { id } | Query: None | Body: None
-router.get('/doctors/:id/availability', protect, getDoctorAvailability);
+router.get('/doctors/:id/availability', getDoctorAvailability);
 // Params: { id } | Query: None | Body: { isActive }
 router.put('/doctors/:id', protect, authorize('admin', 'doctor'), updateDoctorStatus);
 // Params: None | Query: None | Body: { appointmentId, doctorId, patientId, medicines, ... }
 router.post('/prescriptions', protect, authorize('doctor'), createPrescription);
 // Params: None | Query: { doctorId } | Body: None
 router.get('/doctor/dashboard', protect, authorize('doctor'), getDoctorStats);
+
+// Blocked dates for calendar
+// Params: { id } | Query: None | Body: None — get blocked dates for a doctor
+router.get('/doctors/:id/blocked-dates', getBlockedDates);
+// Params: None | Body: { date } — toggle a blocked date (doctor only)
+router.post('/availability/blocked-dates', protect, authorize('doctor'), toggleBlockedDate);
 
 // 4. Admin Specific
 // Params: None | Query: None | Body: { userId, roleTitle, permissions }
@@ -84,6 +91,10 @@ router.get('/admin/users', protect, authorize('admin'), getAllUsers);
 router.get('/admin/patients', protect, authorize('admin'), getAllPatients);
 // Params: { id } | Query: None | Body: None
 router.delete('/admin/users/:id', protect, authorize('admin'), deleteUser);
+// Params: None | Query: None | Body: None — get pending doctor approvals
+router.get('/admin/doctors/pending', protect, authorize('admin'), getPendingDoctors);
+// Params: { id } | Query: None | Body: None — approve a doctor
+router.put('/admin/doctors/:id/approve', protect, authorize('admin'), approveDoctor);
 
 // Admin Resources Management
 // Params: None | Query: None | Body: { name, branch, address, contactPhone, email, location }
@@ -98,64 +109,3 @@ router.put('/appointments/:id/status', protect, authorize('admin', 'doctor'), up
 router.put('/appointments/:id/meet-link', protect, authorize('admin', 'doctor'), addGoogleMeetLink);
 
 export default router;
-
-
-
-/**
-user
-{
-    "user": {
-        "_id": "692fdbafc2c72d673a52df46",
-        "email": "dr@eye.com",
-        "role": "doctor",
-        "profile": {
-            "firstName": "Dr. Strange",
-            "lastName": "Stephen"
-        }
-    },
-    "roleData": {
-        "_id": "692fdcc3c62b62bd961eead2",
-        "user": "692fdbafc2c72d673a52df46",
-        "specialization": "Neuro-Ophthalmology",
-        "registrationNumber": "BMDC-9999",
-        "qualifications": [
-            "MBBS",
-            "MD"
-        ],
-        "isActive": true,
-        "createdAt": "2025-12-03T06:46:27.462Z",
-        "updatedAt": "2025-12-03T06:46:27.462Z",
-        "__v": 0
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MmZkYmFmYzJjNzJkNjczYTUyZGY0NiIsImlhdCI6MTc2NDgyNDk3NSwiZXhwIjoxNzY3NDE2OTc1fQ.1QCJHvS_rHOhbJeiTbfRMJG18inszKnikr-jNnHQgZI"
-}
-
-{
-    "user": {
-        "_id": "692fde039f8edce91f20fbe1",
-        "email": "ptn@eye.com",
-        "role": "patient",
-        "profile": {
-            "firstName": "Mr.",
-            "lastName": "XYZ"
-        }
-    },
-    "roleData": {
-        "_id": "692fde559f8edce91f20fbe7",
-        "user": "692fde039f8edce91f20fbe1",
-        "dateOfBirth": "1990-01-01T00:00:00.000Z",
-        "gender": "other",
-        "allergies": [
-            "Pollen",
-            "Dust"
-        ],
-        "medicalHistory": [
-            "Diabetic Type 2"
-        ],
-        "createdAt": "2025-12-03T06:53:09.742Z",
-        "updatedAt": "2025-12-03T06:53:09.742Z",
-        "__v": 0
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MmZkZTAzOWY4ZWRjZTkxZjIwZmJlMSIsImlhdCI6MTc2NDgyNTI1NCwiZXhwIjoxNzY3NDE3MjU0fQ.k19R-NSin9YzGyR-Ewqa6ScJ1PFnyDgrTit1y1MLVBk"
-}
-**/

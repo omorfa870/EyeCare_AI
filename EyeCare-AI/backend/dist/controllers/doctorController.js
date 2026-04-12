@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateDoctorStatus = exports.searchDoctors = exports.getDoctorStats = exports.getDoctors = exports.createDoctorProfile = void 0;
+exports.updateDoctorStatus = exports.searchDoctors = exports.getDoctorStats = exports.approveDoctor = exports.getPendingDoctors = exports.getDoctors = exports.createDoctorProfile = void 0;
 const Doctor_1 = __importDefault(require("../models/Doctor"));
 const User_1 = __importDefault(require("../models/User"));
 const Appointment_1 = __importDefault(require("../models/Appointment"));
@@ -35,8 +35,8 @@ const createDoctorProfile = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (profileExists) {
             return res.status(400).json({ message: 'Doctor profile already exists' });
         }
-        // 4. Create Profile
-        const doctor = yield Doctor_1.default.create(req.body);
+        // 4. Create Profile (unapproved by default)
+        const doctor = yield Doctor_1.default.create(Object.assign(Object.assign({}, req.body), { isApproved: false, isActive: false }));
         res.status(201).json(doctor);
     }
     catch (e) {
@@ -44,12 +44,11 @@ const createDoctorProfile = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
 });
 exports.createDoctorProfile = createDoctorProfile;
-// @desc    Get All Doctors
+// @desc    Get All Approved & Active Doctors (public)
 // @route   GET /api/doctors
 const getDoctors = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Populate user details (name, email) from the User collection
-        const doctors = yield Doctor_1.default.find()
+        const doctors = yield Doctor_1.default.find({ isApproved: true })
             .populate('user', 'profile.firstName profile.lastName email');
         res.json(doctors);
     }
@@ -58,6 +57,38 @@ const getDoctors = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.getDoctors = getDoctors;
+// @desc    Get Pending (unapproved) doctors — admin only
+// @route   GET /api/admin/doctors/pending
+const getPendingDoctors = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const doctors = yield Doctor_1.default.find({ isApproved: false })
+            .populate('user', 'profile.firstName profile.lastName email createdAt');
+        res.json(doctors);
+    }
+    catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+exports.getPendingDoctors = getPendingDoctors;
+// @desc    Approve a doctor signup request — admin only
+// @route   PUT /api/admin/doctors/:id/approve
+const approveDoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const doctor = yield Doctor_1.default.findById(id);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+        doctor.isApproved = true;
+        doctor.isActive = true;
+        yield doctor.save();
+        res.json({ message: 'Doctor approved successfully', doctor });
+    }
+    catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+exports.approveDoctor = approveDoctor;
 const getDoctorStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { doctorId } = req.query;
@@ -108,14 +139,12 @@ const searchDoctors = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!query || typeof query !== 'string') {
             return res.status(400).json({ message: 'Search query is required' });
         }
-        // Create case-insensitive regex pattern
         const searchPattern = new RegExp(query, 'i');
-        // Find doctors by specialization
         const doctorsBySpecialization = yield Doctor_1.default.find({
+            isApproved: true,
             isActive: true,
             specialization: searchPattern
         }).populate('user', 'profile.firstName profile.lastName email');
-        // Find users (doctors) by name
         const usersByName = yield User_1.default.find({
             role: 'doctor',
             $or: [
@@ -123,13 +152,12 @@ const searchDoctors = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 { 'profile.lastName': searchPattern }
             ]
         }).select('_id');
-        // Get doctor profiles for matching users
         const userIds = usersByName.map(u => u._id);
         const doctorsByName = yield Doctor_1.default.find({
+            isApproved: true,
             isActive: true,
             user: { $in: userIds }
         }).populate('user', 'profile.firstName profile.lastName email');
-        // Combine and deduplicate results
         const allDoctors = [...doctorsBySpecialization, ...doctorsByName];
         const uniqueDoctors = Array.from(new Map(allDoctors.map(doc => [doc._id.toString(), doc])).values());
         res.json(uniqueDoctors);
@@ -152,8 +180,6 @@ const updateDoctorStatus = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!doctor) {
             return res.status(404).json({ message: 'Doctor profile not found' });
         }
-        // Authorization: Admin or the Doctor themselves
-        // req.user is populated by authMiddleware
         if (req.user.role !== 'admin' && doctor.user.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Not authorized to update this profile' });
         }

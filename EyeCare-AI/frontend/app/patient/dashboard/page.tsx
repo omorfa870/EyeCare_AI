@@ -175,7 +175,7 @@ export default function PatientDashboardPage() {
                                </p>
                                <div className="flex items-center gap-4 text-sm font-medium">
                                  <span className="flex items-center gap-1.5 text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1 rounded-md">
-                                  {nextAppointment.type === "remote" ? <><Video className="w-4 h-4 text-blue-500"/> Remote Video</> : <><Building className="w-4 h-4 text-emerald-500"/> Physical Visit</>}
+                                  {nextAppointment.type === "remote" ? <><Video className="w-4 h-4 text-blue-500"/> Teleconsultation</> : <><Building className="w-4 h-4 text-emerald-500"/> Physical Visit</>}
                                  </span>
                                  <span className="flex items-center gap-1.5 text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1 rounded-md">
                                    Status: <span className="capitalize text-primary">{nextAppointment.status}</span>

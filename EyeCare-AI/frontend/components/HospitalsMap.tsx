@@ -1,6 +1,7 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import { Hospital } from '@/lib/types';
 import 'leaflet/dist/leaflet.css';
@@ -9,11 +10,29 @@ import 'leaflet-defaulticon-compatibility';
 
 interface Props {
   hospitals: Hospital[];
+  selectedHospital?: Hospital | null;
   center?: LatLngExpression;
   zoom?: number;
 }
 
-export function HospitalsMap({ hospitals, center, zoom = 12 }: Props) {
+// Inner component that can access the map instance to fly to a location
+function FlyToHospital({ hospital }: { hospital: Hospital | null | undefined }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (hospital?.location) {
+      map.flyTo(
+        [hospital.location.latitude, hospital.location.longitude],
+        15,
+        { duration: 1.2 }
+      );
+    }
+  }, [hospital, map]);
+
+  return null;
+}
+
+export function HospitalsMap({ hospitals, selectedHospital, center, zoom = 12 }: Props) {
   const defaultCenter: LatLngExpression =
     center ||
     (hospitals[0]
@@ -32,6 +51,10 @@ export function HospitalsMap({ hospitals, center, zoom = 12 }: Props) {
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* Fly to selected hospital */}
+        <FlyToHospital hospital={selectedHospital} />
+
         {hospitals.map(h => (
           <Marker
             key={h._id}

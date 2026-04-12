@@ -34,12 +34,10 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const doctorSchema = new mongoose_1.Schema({
-    user: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    specialization: { type: String, required: true },
-    registrationNumber: { type: String, required: true },
-    qualifications: [String],
-    isActive: { type: Boolean, default: false },
-    isApproved: { type: Boolean, default: false }
+const blockedDateSchema = new mongoose_1.Schema({
+    doctor: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    date: { type: String, required: true }, // e.g. "2025-04-15"
 }, { timestamps: true });
-exports.default = mongoose_1.default.model('Doctor', doctorSchema);
+// Unique per doctor per date
+blockedDateSchema.index({ doctor: 1, date: 1 }, { unique: true });
+exports.default = mongoose_1.default.model('BlockedDate', blockedDateSchema);

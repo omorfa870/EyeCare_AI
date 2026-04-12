@@ -6,6 +6,7 @@ export interface IDoctor extends Document {
   registrationNumber: string;    // BMDC Number
   qualifications: string[];      // MBBS, FCPS
   isActive: boolean;
+  isApproved: boolean;           // Admin must approve before doctor can login
 }
 
 const doctorSchema = new Schema<IDoctor>({
@@ -13,7 +14,8 @@ const doctorSchema = new Schema<IDoctor>({
   specialization: { type: String, required: true },
   registrationNumber: { type: String, required: true },
   qualifications: [String],
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model<IDoctor>('Doctor', doctorSchema);

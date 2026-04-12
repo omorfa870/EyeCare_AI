@@ -150,6 +150,18 @@ export const doctorApi = {
     return res.data;
   },
 
+  // Get blocked dates for a doctor (array of YYYY-MM-DD strings)
+  getBlockedDates: async (doctorId: string): Promise<string[]> => {
+    const res = await api.get(`/doctors/${doctorId}/blocked-dates`);
+    return res.data;
+  },
+
+  // Toggle a specific date blocked/unblocked
+  toggleBlockedDate: async (date: string): Promise<{ blocked: boolean; date: string }> => {
+    const res = await api.post('/availability/blocked-dates', { date });
+    return res.data;
+  },
+
   // Upload and analyze eye scan
   analyzeEyeScan: async (patientId: string, doctorId: string, scan: File) => {
     const formData = new FormData();

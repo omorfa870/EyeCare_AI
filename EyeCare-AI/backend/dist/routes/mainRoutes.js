@@ -10,6 +10,7 @@ const appController_1 = require("../controllers/appController");
 const prescriptionController_1 = require("../controllers/prescriptionController");
 const aiController_1 = require("../controllers/aiController");
 const adminController_1 = require("../controllers/adminController");
+const blockedDateController_1 = require("../controllers/blockedDateController");
 // Middleware
 const authMiddleware_1 = require("../middlewares/authMiddleware");
 const uploadMiddleware_1 = require("../middlewares/uploadMiddleware");
@@ -61,13 +62,18 @@ router.post('/availability', authMiddleware_1.protect, (0, authMiddleware_1.auth
 // Params: { id } | Query: None | Body: { startTime, endTime, maxPatients }
 router.put('/availability/:id', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('doctor'), appController_1.updateAvailability);
 // Params: { id } | Query: None | Body: None
-router.get('/doctors/:id/availability', authMiddleware_1.protect, appController_1.getDoctorAvailability);
+router.get('/doctors/:id/availability', appController_1.getDoctorAvailability);
 // Params: { id } | Query: None | Body: { isActive }
 router.put('/doctors/:id', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin', 'doctor'), doctorController_1.updateDoctorStatus);
 // Params: None | Query: None | Body: { appointmentId, doctorId, patientId, medicines, ... }
 router.post('/prescriptions', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('doctor'), prescriptionController_1.createPrescription);
 // Params: None | Query: { doctorId } | Body: None
 router.get('/doctor/dashboard', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('doctor'), doctorController_1.getDoctorStats);
+// Blocked dates for calendar
+// Params: { id } | Query: None | Body: None — get blocked dates for a doctor
+router.get('/doctors/:id/blocked-dates', blockedDateController_1.getBlockedDates);
+// Params: None | Body: { date } — toggle a blocked date (doctor only)
+router.post('/availability/blocked-dates', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('doctor'), blockedDateController_1.toggleBlockedDate);
 // 4. Admin Specific
 // Params: None | Query: None | Body: { userId, roleTitle, permissions }
 router.post('/admin/profile', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), adminController_1.createAdminProfile);
@@ -79,6 +85,10 @@ router.get('/admin/users', authMiddleware_1.protect, (0, authMiddleware_1.author
 router.get('/admin/patients', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), adminController_1.getAllPatients);
 // Params: { id } | Query: None | Body: None
 router.delete('/admin/users/:id', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), adminController_1.deleteUser);
+// Params: None | Query: None | Body: None — get pending doctor approvals
+router.get('/admin/doctors/pending', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), doctorController_1.getPendingDoctors);
+// Params: { id } | Query: None | Body: None — approve a doctor
+router.put('/admin/doctors/:id/approve', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), doctorController_1.approveDoctor);
 // Admin Resources Management
 // Params: None | Query: None | Body: { name, branch, address, contactPhone, email, location }
 router.post('/hospitals', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin'), resourceController_1.createHospital);
@@ -89,61 +99,3 @@ router.put('/appointments/:id/status', authMiddleware_1.protect, (0, authMiddlew
 // Params: { id } | Query: None | Body: { googleMeetLink }
 router.put('/appointments/:id/meet-link', authMiddleware_1.protect, (0, authMiddleware_1.authorize)('admin', 'doctor'), appController_1.addGoogleMeetLink);
 exports.default = router;
-/**
-user
-{
-    "user": {
-        "_id": "692fdbafc2c72d673a52df46",
-        "email": "dr@eye.com",
-        "role": "doctor",
-        "profile": {
-            "firstName": "Dr. Strange",
-            "lastName": "Stephen"
-        }
-    },
-    "roleData": {
-        "_id": "692fdcc3c62b62bd961eead2",
-        "user": "692fdbafc2c72d673a52df46",
-        "specialization": "Neuro-Ophthalmology",
-        "registrationNumber": "BMDC-9999",
-        "qualifications": [
-            "MBBS",
-            "MD"
-        ],
-        "isActive": true,
-        "createdAt": "2025-12-03T06:46:27.462Z",
-        "updatedAt": "2025-12-03T06:46:27.462Z",
-        "__v": 0
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MmZkYmFmYzJjNzJkNjczYTUyZGY0NiIsImlhdCI6MTc2NDgyNDk3NSwiZXhwIjoxNzY3NDE2OTc1fQ.1QCJHvS_rHOhbJeiTbfRMJG18inszKnikr-jNnHQgZI"
-}
-
-{
-    "user": {
-        "_id": "692fde039f8edce91f20fbe1",
-        "email": "ptn@eye.com",
-        "role": "patient",
-        "profile": {
-            "firstName": "Mr.",
-            "lastName": "XYZ"
-        }
-    },
-    "roleData": {
-        "_id": "692fde559f8edce91f20fbe7",
-        "user": "692fde039f8edce91f20fbe1",
-        "dateOfBirth": "1990-01-01T00:00:00.000Z",
-        "gender": "other",
-        "allergies": [
-            "Pollen",
-            "Dust"
-        ],
-        "medicalHistory": [
-            "Diabetic Type 2"
-        ],
-        "createdAt": "2025-12-03T06:53:09.742Z",
-        "updatedAt": "2025-12-03T06:53:09.742Z",
-        "__v": 0
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MmZkZTAzOWY4ZWRjZTkxZjIwZmJlMSIsImlhdCI6MTc2NDgyNTI1NCwiZXhwIjoxNzY3NDE3MjU0fQ.k19R-NSin9YzGyR-Ewqa6ScJ1PFnyDgrTit1y1MLVBk"
-}
-**/

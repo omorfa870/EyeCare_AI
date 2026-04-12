@@ -342,7 +342,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-2xl font-bold mb-3">Expert Doctors</h3>
                   <p className="text-muted-foreground text-sm">
-                    Consult with top certified ophthalmologists directly through secure remote video or chat.
+                    Consult with top certified ophthalmologists directly through secure teleconsultation or chat.
                   </p>
                 </CardContent>
               </Card>

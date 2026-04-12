@@ -44,7 +44,7 @@ export default function DoctorUploadScanPage() {
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<EyeRecord | null>(null);
   const [predictionResult, setPredictionResult] = useState<EyeImagePredictionResponse | null>(null);
-  const [step, setStep] = useState<"upload" | "analyzing" | "result">("upload");
+  const [step, setStep] = useState<"upload" | "analyzing" | "result" | "not-related">("upload");
   
   const [patients, setPatients] = useState<PatientInfo[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
@@ -118,13 +118,25 @@ export default function DoctorUploadScanPage() {
     try {
       // Call the eye image API for prediction
       const prediction = await eyeImageService.predict(selectedFile);
+
+      // Confidence threshold: below 50% means not a valid fundus image
+      if (prediction.confidence < 0.5) {
+        setPredictionResult(null);
+        setAnalysisResult(null);
+        setTimeout(() => {
+          setStep("not-related");
+          setLoading(false);
+        }, 1500);
+        return;
+      }
+
       setPredictionResult(prediction);
-      
+
       // Determine severity based on confidence and condition
       const getSeverity = (condition: string, confidence: number): 'low' | 'moderate' | 'severe' => {
         const severeConditions = ['glaucoma', 'diabetic_retinopathy', 'age_related_macular_degeneration'];
         const moderateConditions = ['cataract', 'hypertensive_retinopathy'];
-        
+
         if (severeConditions.some(c => condition.toLowerCase().includes(c))) {
           return confidence > 0.7 ? 'severe' : 'moderate';
         }
@@ -133,7 +145,7 @@ export default function DoctorUploadScanPage() {
         }
         return 'low';
       };
-      
+
       // Create analysis result
       const result: EyeRecord = {
         _id: Date.now().toString(),
@@ -151,7 +163,7 @@ export default function DoctorUploadScanPage() {
         updatedAt: new Date().toISOString(),
       };
       setAnalysisResult(result);
-      
+
       // Artificial delay to let the nice animation play out
       setTimeout(() => {
         setStep("result");
@@ -190,7 +202,7 @@ export default function DoctorUploadScanPage() {
         </div>
 
         <Card className="border-border/50 bg-card/60 backdrop-blur-xl shadow-2xl relative overflow-hidden rounded-3xl">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500" />
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-blue-500 to-indigo-500" />
           
           <CardContent className="p-6 md:p-10 min-h-[500px] flex flex-col justify-center">
             <AnimatePresence mode="wait">
@@ -270,12 +282,39 @@ export default function DoctorUploadScanPage() {
                       <Brain className="h-16 w-16 text-blue-500 animate-bounce" />
                     </div>
                     {/* Scanning line effect */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent z-20 animate-[scan_2s_ease-in-out_infinite]" />
+                    <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-blue-400 to-transparent z-20 animate-[scan_2s_ease-in-out_infinite]" />
                   </div>
                   <h3 className="text-3xl font-black text-foreground mb-3 tracking-tight">Processing Imagery</h3>
                   <p className="text-muted-foreground text-lg max-w-sm mx-auto">
                     Our neural network is analyzing the retina for anomalies and disease markers.
                   </p>
+                </motion.div>
+              )}
+
+              {/* Step: Not Related */}
+              {step === "not-related" && (
+                <motion.div key="not-related" variants={fadeIn} initial="hidden" animate="visible" exit="exit" className="text-center py-16 flex flex-col items-center max-w-lg mx-auto">
+                  <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+                    <AlertCircle className="h-12 w-12 text-amber-500" />
+                  </div>
+                  <h3 className="text-2xl font-black text-foreground mb-3 tracking-tight">
+                    Image Not Recognized
+                  </h3>
+                  <p className="text-muted-foreground text-base max-w-sm mx-auto mb-8 leading-relaxed">
+                    The image is not related to eye disease or not a preprocessed fundus image. Please upload a valid retinal scan for accurate analysis.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setStep("upload");
+                      setSelectedFile(null);
+                      setPreviewUrl("");
+                      setAnalysisResult(null);
+                      setPredictionResult(null);
+                    }}
+                    className="h-12 px-8 rounded-2xl font-bold"
+                  >
+                    Try Another Image
+                  </Button>
                 </motion.div>
               )}
 
